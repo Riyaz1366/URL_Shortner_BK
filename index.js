@@ -4,7 +4,10 @@ const express = require("express");
 
 const mongoose = require("mongoose");
 
-const cors = require('cors')
+const cors = require("cors");
+
+const bodyParser = require('body-parser');
+
 
 const routes = require("./route/route");
 
@@ -12,11 +15,12 @@ const url = process.env.MONGO_URL;
 const port = process.env.PORT;
 const app = express();
 app.use(express.json());
+
 app.use(cors());
 
+
+
 mongoose.set("strictQuery", false);
-
-
 
 mongoose.connect(url).then(() => {
   console.log("Mongodb Connected");
