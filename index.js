@@ -20,6 +20,10 @@ mongoose.set("strictQuery", false);
 
 mongoose.connect(url).then(() => {
   console.log("Mongodb Connected");
+
+})
+.catch((error) => {
+  console.error('Error connecting to MongoDB:', error);
 });
 
 app.use("/", routes);
