@@ -61,7 +61,7 @@ router.post("/users", async (req, res) => {
       to: email,
       subject: "Account Verification",
       html: `<p>Click the following link to verify your account:</p>
-      <a href="http://localhost:3002/confirm/${newUser.verificationToken}">Verify Account</a>`,
+      <a href="https://reset-password-cnvf.onrender.com/confirm/${newUser.verificationToken}">Verify Account</a>`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -193,7 +193,7 @@ router.post("/shorten", async (req, res) => {
     });
     await url.save();
 
-    res.json({ short_url: `http://localhost:${port}/shorten/${short_code}` });
+    res.json({ short_url: `https://reset-password-cnvf.onrender.com/shorten/${short_code}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
@@ -240,7 +240,7 @@ router.post("/reset-password/:token", async (req, res) => {
     user.resetPasswordExpires = undefined;
     await user.save();
 
-    res.redirect("http://localhost:3000/changepassword");
+    res.redirect("https://reset-password-cnvf.onrender.com/changepassword");
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error." });
