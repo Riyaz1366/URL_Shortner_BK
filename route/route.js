@@ -54,6 +54,7 @@ router.post("/users", async (req, res) => {
       verified: false,
     });
     const savedUser = await newUser.save();
+    alert('Verification Link Send to Email');
 
     const mailOptions = {
       from: user,
