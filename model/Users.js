@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
   verified: {
     type: Boolean,
   },
+
   timpstamp: {
     type: Date,
     default: Date.now,

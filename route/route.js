@@ -12,11 +12,12 @@ const verificationTokenExpiration = 600;
 const ShortenedURL = require("../model/shorten.js");
 const crypto = require("crypto");
 router.use(express.json());
-
+const nanoid = require("nanoid");
 const SECRET_KEY = process.env.SECRET;
 router.use(cors());
 const User = require("../model/Users");
-
+const path = require("path");
+const port = process.env.PORT;
 const user = process.env.User;
 const pass = process.env.Pass;
 const gmail = process.env.service;
@@ -164,38 +165,156 @@ router.post("/login", async (req, res) => {
   }
 });
 
+function generateShortCode(length) {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let shortCode = "";
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    shortCode += characters.charAt(randomIndex);
+  }
+
+  return shortCode;
+}
+
 router.post("/shorten", async (req, res) => {
   const originalUrl = req.body.long_url;
-
+  const short_code = generateShortCode(8);
   if (!originalUrl) {
     return res.status(400).json({ error: "Invalid URL format" });
   }
 
   try {
-    const url = new ShortenedURL({ long_url: originalUrl });
+    const url = new ShortenedURL({
+      long_url: originalUrl,
+      short_key: short_code,
+    });
     await url.save();
 
-    res.json({ originalUrl, short_url: url.short_key });
+    res.json({ short_url: `http://localhost:${port}/shorten/${short_code}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Route to redirect to the original URL
 router.get("/shorten/:shortKey", async (req, res) => {
-  const shortKey = req.params.shortKey;
+  const short_key = req.params.shortKey;
 
   try {
-    const url = await ShortenedURL.findOne({ short_key: shortKey });
-    console.log("Received shortKey:", shortKey);
-    if (url) {
-      res.redirect(url.original_url);
+    const url = await ShortenedURL.findOne({ short_key });
+
+    if (!url) {
+      return res.status(404).json({ error: "URL not found" });
     } else {
-      res.status(404).send("URL not found");
+      res.redirect(url.long_url);
     }
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    const user = await User.findOne({ resetPasswordToken: token });
+
+    if (!user) {
+      return res.status(404).json({ error: "Invalid or expired token." });
+    }
+
+    if (user.resetPasswordExpires && user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ error: "Reset token has expired." });
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.redirect("http://localhost:3000/changepassword");
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+function generateVerificationToken() {
+  return Math.floor(1000 + Math.random() * 9000);
+}
+
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const verificationToken = generateVerificationToken();
+    user.verificationToken = verificationToken;
+
+    await user.save();
+
+    await transporter.sendMail({
+      from: "riyaz.mohideen1366@gmail.com",
+      to: email,
+      subject: "Temporary Token for Password Reset",
+      text: `Your temporary token for password reset is: ${verificationToken}`,
+    });
+
+    return res.status(200).json({ message: "Password reset email sent" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/reset-password/:token", async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(404).json({ message: "Invalid or expired token" });
+    }
+
+    res.sendFile(path.join(__dirname, "..", "reset-password.html"));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(404).json({ message: "Invalid or expired token" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.verificationToken = null;
+    await user.save();
+
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
