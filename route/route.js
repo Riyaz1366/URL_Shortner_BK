@@ -209,11 +209,24 @@ router.get("/shorten/:shortKey", async (req, res) => {
     if (!url) {
       return res.status(404).json({ error: "URL not found" });
     } else {
+     
+      await url.save();
       res.redirect(url.long_url);
     }
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+router.get('/all-shortened-urls', async (req, res) => {
+  try {
+    const allUrls = await ShortenedURL.find({},'-_id short_key Clicks'); 
+    res.status(200).json(allUrls);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
