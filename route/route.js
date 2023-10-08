@@ -209,9 +209,10 @@ router.get("/shorten/:shortKey", async (req, res) => {
     if (!url) {
       return res.status(404).json({ error: "URL not found" });
     } else {
-     
+      url.Clicks += 1;
       await url.save();
       res.redirect(url.long_url);
+
     }
   } catch (error) {
     console.log(error);
