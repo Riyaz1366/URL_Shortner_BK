@@ -193,7 +193,7 @@ router.post("/shorten", async (req, res) => {
     });
     await url.save();
 
-    res.json({ short_url: `http://localhost:3002/shorten/${short_code}` });
+    res.json({ short_url: `https://url-shortner-bk.onrender.com/shorten/${short_code}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
